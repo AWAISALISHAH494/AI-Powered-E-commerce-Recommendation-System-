@@ -132,7 +132,7 @@ def log_interaction(user_id, product_id, product_name, interaction_type):
     conn.close()
 
 # Display product card
-def display_product_card(product, show_similarity=False):
+def display_product_card(product, show_similarity=False, key_namespace=""):
     with st.container():
         col1, col2 = st.columns([1, 3])
         
@@ -150,17 +150,21 @@ def display_product_card(product, show_similarity=False):
             if show_similarity and 'similarity_score' in product:
                 st.write(f"**Match Score:** {product['similarity_score']:.2%}")
             
-            with st.expander("Product Description"):
+            # Ensure expander key uniqueness as well
+            expander_key = f"desc_{key_namespace}_{product['id']}" if key_namespace else f"desc_{product['id']}"
+            with st.expander("Product Description", expanded=False):
                 st.write(product['description'])
             
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
-                if st.button(f"👀 View Details", key=f"view_{product['id']}"):
+                view_key = f"view_{key_namespace}_{product['id']}" if key_namespace else f"view_{product['id']}"
+                if st.button(f"👀 View Details", key=view_key):
                     log_interaction(st.session_state.user_id, product['id'], product['name'], 'view')
                     st.success("Added to your viewing history!")
             
             with col_btn2:
-                if st.button(f"🛒 Add to Cart", key=f"cart_{product['id']}"):
+                cart_key = f"cart_{key_namespace}_{product['id']}" if key_namespace else f"cart_{product['id']}"
+                if st.button(f"🛒 Add to Cart", key=cart_key):
                     log_interaction(st.session_state.user_id, product['id'], product['name'], 'add_to_cart')
                     st.success("Added to cart!")
 
@@ -249,7 +253,7 @@ def main():
             st.write(f"Found {len(filtered_products)} products:")
             
             for idx, product in filtered_products.iterrows():
-                display_product_card(product)
+                display_product_card(product, key_namespace="search")
                 st.markdown("---")
         else:
             st.info("No products found. Try different search terms.")
@@ -274,7 +278,7 @@ def main():
                     st.success(f"Products similar to **{selected_product}**:")
                     
                     for idx, product in recommendations.iterrows():
-                        display_product_card(product, show_similarity=True)
+                        display_product_card(product, show_similarity=True, key_namespace="content")
                         st.markdown("---")
                 else:
                     st.warning("No recommendations found.")
@@ -290,7 +294,7 @@ def main():
                 
                 st.success("Recommended for you:")
                 for idx, product in recommendations.iterrows():
-                    display_product_card(product)
+                    display_product_card(product, key_namespace="behavior")
                     st.markdown("---")
         
         else:  # Hybrid
@@ -319,13 +323,13 @@ def main():
                 if not content_recs.empty:
                     st.write("**Similar to your selection:**")
                     for idx, product in content_recs.iterrows():
-                        display_product_card(product, show_similarity=True)
+                        display_product_card(product, show_similarity=True, key_namespace="hybrid_content")
                         st.markdown("---")
                 
                 if not behavior_recs.empty:
                     st.write("**Based on your preferences:**")
                     for idx, product in behavior_recs.iterrows():
-                        display_product_card(product)
+                        display_product_card(product, key_namespace="hybrid_behavior")
                         st.markdown("---")
     
     with tab3:
